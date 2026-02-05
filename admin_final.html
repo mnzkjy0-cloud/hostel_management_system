@@ -41,7 +41,7 @@
         .input:focus { border-color: #dc2626; background: #fff; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1); }
         .input:disabled { background: #f1f5f9; color: #94a3b8; }
 
-        .btn { background: #dc2626; color: #fff; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; display: inline-flex; items-center; justify-content: center; gap: 8px; font-size: 0.9rem; }
+        .btn { background: #dc2626; color: #fff; padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
         .btn:hover { background: #b91c1c; transform: translateY(-1px); }
         .btn:active { transform: translateY(0); }
         
@@ -239,7 +239,7 @@
                 <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h2 class="text-3xl font-bold text-slate-900">Admissions</h2>
-                        <p class="text-slate-500 mt-1">Manage deadlines, ranking logic, and student registry.</p>
+                        <p class="text-slate-500 mt-1">Manage deadlines, detailed priority logic, and student registry.</p>
                     </div>
                     <button onclick="toggleRegistry()" class="btn-outline bg-white shadow-sm flex items-center gap-2">
                         <i class="fa-solid fa-address-book text-blue-500"></i> Student Registry
@@ -285,8 +285,7 @@
                     <div class="space-y-6">
                         <!-- DEADLINE -->
                         <div class="card">
-                            <h3 class="font-bold text-lg mb-4 text-slate-800">Application Cycle</h3>
-                            <label class="text-sm text-slate-500 block mb-2">Deadline</label>
+                            <h3 class="font-semibold mb-3 text-lg text-slate-800">Application Deadline</h3>
                             <input type="datetime-local" class="input">
                             <div class="mt-4 p-4 bg-yellow-50 text-yellow-800 rounded-lg text-sm border border-yellow-100">
                                 <i class="fa-solid fa-triangle-exclamation mr-2"></i> Closing the cycle will auto-reject pending applications.
@@ -295,7 +294,7 @@
 
                         <!-- MANAGEMENT QUOTA -->
                         <div class="card">
-                            <h3 class="font-bold text-lg mb-4 text-slate-800">Management Reservation</h3>
+                            <h3 class="font-semibold mb-3 text-lg text-slate-800">Management Reservation</h3>
                             <p class="text-sm text-slate-500 mb-4">Direct approval for management quota.</p>
                             <div class="flex gap-2">
                                 <input class="input mb-0" placeholder="Application ID">
@@ -304,18 +303,18 @@
                         </div>
                     </div>
                     
-                    <!-- Column 2: Detailed Priority Algorithm -->
+                    <!-- Column 2: Detailed Algorithm -->
                     <div class="card">
-                        <h3 class="font-bold text-lg mb-2 text-slate-800">Priority Algorithm</h3>
-                        <p class="text-sm text-slate-500 mb-4 bg-slate-50 p-2 rounded border border-slate-100 font-mono text-xs">
-                            Score = Distance×D + Year×Y + Category + Merit×M + Bonus
+                        <h3 class="font-semibold mb-2 text-lg text-slate-800">Priority Algorithm</h3>
+                        <p class="text-sm text-slate-500 mb-4 bg-slate-50 p-3 rounded border border-slate-100 font-mono text-xs">
+                            Score = Distance×D + Year×Y + Category + Merit×M + Special Bonus
                         </p>
 
                         <div class="space-y-4">
                             <div>
                                 <label class="text-xs font-bold text-slate-400 uppercase">Core Weights</label>
                                 <div class="grid grid-cols-3 gap-2 mt-1">
-                                    <input class="input mb-0" placeholder="Dist (D)">
+                                    <input class="input mb-0" placeholder="Distance (D)">
                                     <input class="input mb-0" placeholder="Year (Y)">
                                     <input class="input mb-0" placeholder="Merit (M)">
                                 </div>
@@ -324,18 +323,18 @@
                             <div>
                                 <label class="text-xs font-bold text-slate-400 uppercase">Category Points</label>
                                 <div class="grid grid-cols-2 gap-2 mt-1">
-                                    <input class="input mb-0" placeholder="General">
-                                    <input class="input mb-0" placeholder="OBC">
-                                    <input class="input mb-0" placeholder="SC">
-                                    <input class="input mb-0" placeholder="ST">
+                                    <input class="input mb-0" placeholder="General Pts">
+                                    <input class="input mb-0" placeholder="OBC Pts">
+                                    <input class="input mb-0" placeholder="SC Pts">
+                                    <input class="input mb-0" placeholder="ST Pts">
                                 </div>
                             </div>
 
                             <div>
                                 <label class="text-xs font-bold text-slate-400 uppercase">Special Bonuses</label>
                                 <div class="grid grid-cols-2 gap-2 mt-1">
-                                    <input class="input mb-0" placeholder="Military Ward">
-                                    <input class="input mb-0" placeholder="Disability">
+                                    <input class="input mb-0" placeholder="Military Bonus">
+                                    <input class="input mb-0" placeholder="Disability Bonus">
                                 </div>
                             </div>
                         </div>
@@ -610,7 +609,7 @@
     </main>
 </div>
 
-<!-- ROOM EDIT MODAL -->
+<!-- ROOM EDIT MODAL (With AC option) -->
 <div id="roomModal" class="modal-overlay">
     <div class="modal-content">
         <div class="flex justify-between items-center mb-6">
@@ -628,13 +627,6 @@
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Room Type</label>
-                    <select id="editRoomType" class="input">
-                        <option value="Non-AC">Non-AC</option>
-                        <option value="AC">AC</option>
-                    </select>
-                </div>
-                <div>
                     <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Max Capacity</label>
                     <input id="editRoomMax" type="number" class="input">
                 </div>
@@ -642,6 +634,14 @@
                     <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Occupants</label>
                     <input id="editRoomCurrent" type="number" class="input">
                 </div>
+            </div>
+
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Room Type</label>
+                <select id="editRoomType" class="input cursor-pointer">
+                    <option value="Non-AC">Non-AC</option>
+                    <option value="AC">AC (Air Conditioned)</option>
+                </select>
             </div>
         </div>
 
@@ -666,7 +666,7 @@
     };
     
     // --- FINANCIAL & STUDENT DATA STATE ---
-    const TOTAL_STUDENTS = 35;
+    const TOTAL_STUDENTS = 305;
     
     // MOCK STUDENT DATABASE
     const studentDatabase = [
@@ -742,8 +742,6 @@
 
         data.forEach(s => {
             const tr = document.createElement('tr');
-            
-            // Badge Logic
             let badgeClass = 'badge-gray';
             if(s.special === 'Scholarship') badgeClass = 'badge-blue';
             if(s.special === 'PWD') badgeClass = 'badge-purple';
@@ -1003,6 +1001,8 @@
 
         floor.rooms.forEach((room, index) => {
             const div = document.createElement('div');
+            
+            // Handle Null (Empty Space)
             if (room === null) {
                 div.className = 'room-box room-null';
                 if(isLayoutEditing) {
@@ -1012,27 +1012,35 @@
                 container.appendChild(div);
                 return;
             }
-            
-            // Status Logic
+
+            // Determine Status Color
             let statusClass = 'status-empty';
             if (room.current >= room.max) statusClass = 'status-full';
             else if (room.current > 0) statusClass = 'status-partial';
-            
-            div.className = `room-box ${statusClass}`;
-            
-            // AC Icon Logic
-            const acIcon = room.type === 'AC' ? '<i class="fa-regular fa-snowflake absolute top-2 right-2 text-blue-100 text-xs"></i>' : '';
 
+            div.className = `room-box ${statusClass} relative`;
+            
+            // Interaction Logic
             if(isLayoutEditing) {
                 div.onclick = () => toggleCellType(index);
+                // Clean look: No text inside when editing layout
+                div.innerHTML = '';
+                div.title = `Room ${room.id}`; // Tooltip for reference
             } else {
                 div.onclick = () => openRoomModal(index);
+                
+                // AC Icon Logic (Only shown in View Mode)
+                let acIcon = '';
+                if (room.type === 'AC') {
+                    acIcon = `<div class="absolute top-1 right-2 text-blue-100 text-xs drop-shadow-md" title="AC Room"><i class="fa-regular fa-snowflake"></i></div>`;
+                }
+
+                div.innerHTML = `
+                    ${acIcon}
+                    <span class="room-id">${room.id}</span>
+                    <span class="room-stats"><i class="fa-solid fa-user-group text-xs"></i> ${room.current}/${room.max}</span>
+                `;
             }
-            div.innerHTML = `
-                ${acIcon}
-                <span class="room-id">${room.id}</span>
-                <span class="room-stats"><i class="fa-solid fa-user-group text-xs"></i> ${room.current}/${room.max}</span>
-            `;
             container.appendChild(div);
         });
     }
@@ -1053,12 +1061,13 @@
         const floor = hostelData.floors[currentFloorIndex];
         const room = floor.rooms[roomIndex];
         if(!room) return;
+
         document.getElementById('editRoomIndex').value = roomIndex;
         document.getElementById('editRoomId').value = room.id;
         document.getElementById('editRoomMax').value = room.max;
         document.getElementById('editRoomCurrent').value = room.current;
-        document.getElementById('editRoomType').value = room.type || 'Non-AC'; // Default if undefined
-        
+        document.getElementById('editRoomType').value = room.type || 'Non-AC';
+
         const modal = document.getElementById('roomModal');
         modal.classList.remove('hidden');
         setTimeout(() => modal.classList.add('active'), 10);
@@ -1077,7 +1086,11 @@
         const newCurrent = parseInt(document.getElementById('editRoomCurrent').value);
         const newType = document.getElementById('editRoomType').value;
 
-        if(newCurrent > newMax) { alert("Current occupancy cannot exceed max capacity!"); return; }
+        if(newCurrent > newMax) {
+            alert("Current occupancy cannot exceed max capacity!");
+            return;
+        }
+
         const floor = hostelData.floors[currentFloorIndex];
         if(floor.rooms[index]) {
             floor.rooms[index].id = newId;
@@ -1085,6 +1098,7 @@
             floor.rooms[index].current = newCurrent;
             floor.rooms[index].type = newType;
         }
+
         closeModal();
         renderRoomGrid();
     }
