@@ -134,12 +134,12 @@
                     localStorage.setItem('hms_user', JSON.stringify(safeUser));
 
                     // REDIRECTION LOGIC BASED ON ROLE
-                    if (user.role === 'Warden') {
+                    if (user.role === 'warden') {
                         window.location.href = 'warden.html';
-                    } else if (user.role === 'Admin') {
+                    } else if (user.role === 'admin') {
                         window.location.href = 'admin.html';
                     } else {
-                        window.location.href = 'student_portal.html';
+                        window.location.href = 'index.html';
                     }
                 } else {
                     // Error
