@@ -142,7 +142,7 @@
     <script>
         // Check if user is logged in and is a Warden
         const user = JSON.parse(localStorage.getItem("hms_user"));
-        if (!user || user.role !== 'Warden') {
+        if (!user || user.role !== 'warden') {
             window.location.href = "login.html";
         } else {
             document.getElementById("wardenNameDisplay").textContent = user.name;
