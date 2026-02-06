@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warden Portal | Operations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#1e293b' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .nav-item { padding: 12px 16px; border-radius: 8px; display: flex; gap: 12px; color: #cbd5e1; transition: all 0.2s; text-align: left; width: 100%; align-items: center; font-size: 0.95rem; font-weight: 500; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: #f8fafc; }
+        .nav-item.active { background: #4f46e520; color: #818cf8; border-right: 4px solid #6366f1; }
+
+        /* Room Grid */
+        .room-grid { display: grid; gap: 12px; grid-template-columns: repeat(4, 1fr); }
+        .room-box {
+            height: 100px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            border: 2px solid transparent;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            background: white;
+        }
+        .room-box:hover { transform: translateY(-3px); box-shadow: 0 8px 15px -3px rgba(0,0,0,0.1); border-color: #6366f1; }
+        
+        /* Occupancy Indicators */
+        .dot-grid { display: flex; gap: 3px; margin-top: 6px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; }
+        .dot.filled { background: #4f46e5; }
+        .dot.absent { background: #ef4444; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: white; padding: 0; border-radius: 16px; width: 500px; max-width: 95%; transform: scale(0.95); transition: transform 0.2s; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+    </style>
+</head>
+
+<body class="bg-slate-50 font-sans text-slate-800">
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 z-20 shadow-2xl">
+            <div class="h-20 flex items-center px-6 border-b border-slate-800 gap-3">
+                <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                    <i class="fa-solid fa-user-shield text-lg"></i>
+                </div>
+                <h1 class="font-bold text-lg text-white">HMS Warden</h1>
+            </div>
+
+            <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                <button onclick="showSection('floor-view', this)" class="nav-item active">
+                    <i class="fa-solid fa-layer-group w-6 text-center"></i> Floor Operations
+                </button>
+                <button onclick="showSection('history', this)" class="nav-item">
+                    <i class="fa-solid fa-clock-rotate-left w-6 text-center"></i> Attendance Log
+                </button>
+                <button onclick="showSection('requests', this)" class="nav-item">
+                    <i class="fa-solid fa-right-left w-6 text-center"></i> Room Requests
+                </button>
+                <button onclick="showSection('complaints', this)" class="nav-item">
+                    <i class="fa-solid fa-screwdriver-wrench w-6 text-center"></i> Complaints
+                </button>
+            </nav>
+            
+            <div class="p-4 border-t border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold">W</div>
+                    <div>
+                        <p class="font-medium text-sm text-white">Chief Warden</p>
+                        <p class="text-xs text-slate-500">Block A</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 overflow-y-auto relative">
+            
+            <!-- SECTION 1: VISUAL FLOOR MAP (ATTENDANCE & OCCUPANCY) -->
+            <section id="floor-view" class="section p-8 fade-in">
+                <header class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Floor Operations</h2>
+                        <p class="text-slate-500 text-sm">Real-time occupancy and attendance marking.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <select class="input py-2 px-4 rounded-lg border border-slate-300 bg-white text-sm font-bold shadow-sm cursor-pointer outline-none hover:border-indigo-500">
+                            <option>Ground Floor</option>
+                            <option>First Floor</option>
+                            <option>Second Floor</option>
+                        </select>
+                    </div>
+                </header>
+
+                <!-- Stats Bar -->
+                <div class="grid grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Total Capacity</p>
+                        <p class="text-2xl font-bold text-slate-800">48</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Occupied</p>
+                        <p class="text-2xl font-bold text-indigo-600">42</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Present Tonight</p>
+                        <p class="text-2xl font-bold text-green-600" id="presentCount">38</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Absent / Leave</p>
+                        <p class="text-2xl font-bold text-red-500" id="absentCount">4</p>
+                    </div>
+                </div>
+
+                <!-- THE GRID -->
+                <div class="bg-slate-100 p-6 rounded-2xl border border-slate-200 inner-shadow">
+                    <div id="roomContainer" class="room-grid">
+                        <!-- Rooms injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="flex gap-6 mt-4 text-xs font-bold text-slate-500 justify-center">
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-indigo-600"></div> Present</div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500"></div> Absent</div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-slate-300"></div> Empty Bed</div>
+                    <div class="flex items-center gap-2"><i class="fa-regular fa-snowflake text-blue-400"></i> AC Room</div>
+                </div>
+            </section>
+
+            <!-- SECTION 1.5: ATTENDANCE HISTORY (NEW) -->
+            <section id="history" class="section p-8 hidden fade-in">
+                <header class="mb-6 flex justify-between items-end">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Attendance Log</h2>
+                        <p class="text-slate-500 text-sm">Review past attendance records.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="date" class="py-2 px-4 rounded-lg border border-slate-300 text-sm" value="2026-02-06">
+                        <button class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Load</button>
+                    </div>
+                </header>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-xs">
+                            <tr>
+                                <th class="p-4">Date</th>
+                                <th class="p-4">Total Students</th>
+                                <th class="p-4 text-green-600">Present</th>
+                                <th class="p-4 text-red-600">Absent</th>
+                                <th class="p-4 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-4 font-bold text-slate-700">Feb 06, 2026</td>
+                                <td class="p-4">42</td>
+                                <td class="p-4">40</td>
+                                <td class="p-4">2</td>
+                                <td class="p-4 text-right"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Verified</span></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-4 font-bold text-slate-700">Feb 05, 2026</td>
+                                <td class="p-4">42</td>
+                                <td class="p-4">38</td>
+                                <td class="p-4">4</td>
+                                <td class="p-4 text-right"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Verified</span></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-4 font-bold text-slate-700">Feb 04, 2026</td>
+                                <td class="p-4">42</td>
+                                <td class="p-4">41</td>
+                                <td class="p-4">1</td>
+                                <td class="p-4 text-right"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Verified</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECTION 2: ROOM CHANGE REQUESTS -->
+            <section id="requests" class="section p-8 hidden fade-in">
+                <header class="mb-6">
+                    <h2 class="text-2xl font-bold text-slate-900">Room Change Requests</h2>
+                    <p class="text-slate-500 text-sm">Verify availability on the map before approving.</p>
+                </header>
+
+                <div class="space-y-4 max-w-4xl">
+                    <!-- Request Card -->
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row">
+                        <div class="p-6 flex-1">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-800">Rahul Sharma</h3>
+                                    <p class="text-sm text-slate-500">Current: <span class="font-mono font-bold">102</span> &rarr; Requested: <span class="font-mono font-bold text-indigo-600">105</span></p>
+                                </div>
+                                <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold">Medical</span>
+                            </div>
+                            <p class="text-slate-600 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                "I have dust allergies and Room 102 has poor ventilation. Room 105 is AC and better suited."
+                            </p>
+                        </div>
+                        <div class="bg-slate-50 p-6 flex flex-col justify-center gap-2 border-l border-slate-100 w-full md:w-48">
+                            <button onclick="checkAvailability(105)" class="w-full py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100">
+                                <i class="fa-solid fa-eye mr-1"></i> Check 105
+                            </button>
+                            <div class="flex gap-2 mt-2">
+                                <button class="flex-1 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700">Approve</button>
+                                <button class="flex-1 py-2 bg-red-100 text-red-600 rounded-lg text-xs font-bold hover:bg-red-200">Reject</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: COMPLAINTS (POPULATED) -->
+            <section id="complaints" class="section p-8 hidden fade-in">
+                <header class="mb-6 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Maintenance Issues</h2>
+                        <p class="text-slate-500 text-sm">Track and resolve student complaints.</p>
+                    </div>
+                    <button class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm">
+                        <i class="fa-solid fa-filter mr-1"></i> Filter
+                    </button>
+                </header>
+
+                <div class="grid grid-cols-1 gap-4 max-w-4xl">
+                    <!-- Item 1 -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-faucet-drip"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-slate-800">Leaking Tap in Bathroom</h4>
+                                <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold">Pending</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Room 101 • Reported 2 hours ago</p>
+                            <p class="text-sm text-slate-600 mt-2">"The tap in the shared bathroom is dripping continuously."</p>
+                            <div class="mt-3 flex gap-2">
+                                <button class="text-xs font-bold text-indigo-600 hover:underline">Verify</button>
+                                <button class="text-xs font-bold text-green-600 hover:underline">Mark Resolved</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 2 -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-lightbulb"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-slate-800">Tube Light Flickering</h4>
+                                <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Resolved</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Room 104 • Reported Yesterday</p>
+                            <p class="text-sm text-slate-600 mt-2">"The main tube light is flickering heavily, causing eye strain."</p>
+                            <div class="mt-3 text-xs text-slate-400">
+                                <i class="fa-solid fa-check mr-1"></i> Resolved by Electrician at 10:00 AM
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 3 -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-slate-800">Noise Complaint</h4>
+                                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">Investigating</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Room 108 • Reported 30 mins ago</p>
+                            <p class="text-sm text-slate-600 mt-2">"Loud music playing from Room 108 during study hours."</p>
+                            <div class="mt-3 flex gap-2">
+                                <button class="text-xs font-bold text-indigo-600 hover:underline">Issue Warning</button>
+                                <button class="text-xs font-bold text-red-600 hover:underline">Escalate to Admin</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ROOM DETAILS & ATTENDANCE MODAL -->
+    <div id="roomModal" class="modal-overlay">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="bg-slate-900 p-5 flex justify-between items-center text-white">
+                <div>
+                    <h3 class="font-bold text-xl flex items-center gap-2">
+                        Room <span id="modalRoomId" class="font-mono text-indigo-400">101</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1" id="modalRoomType">AC • 4 Capacity</p>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <!-- Student List -->
+            <div class="p-0">
+                <div id="studentListContainer" class="divide-y divide-slate-100">
+                    <!-- Students Injected Here -->
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+                <p class="text-xs text-slate-500 font-bold">* Changes save automatically</p>
+                <button onclick="closeModal()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-sm">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA SIMULATION ---
+        // Room Data: Stores Room Details + Array of Occupants
+        // Status: 1 = Present (Green), 0 = Absent (Red)
+        const floorData = [
+            { id: 101, type: 'AC', capacity: 4, occupants: [
+                { id: 'S01', name: 'Arun Kumar', img: 'AK', status: 1 },
+                { id: 'S02', name: 'Bibin George', img: 'BG', status: 1 },
+                { id: 'S03', name: 'Charles D', img: 'CD', status: 0 }, // Absent
+                { id: 'S04', name: 'David Raj', img: 'DR', status: 1 }
+            ]},
+            { id: 102, type: 'Non-AC', capacity: 4, occupants: [
+                { id: 'S05', name: 'Evan Paul', img: 'EP', status: 1 },
+                { id: 'S06', name: 'Farhan M', img: 'FM', status: 1 }
+            ]},
+            { id: 103, type: 'AC', capacity: 4, occupants: [] }, // Empty
+            { id: 104, type: 'Non-AC', capacity: 4, occupants: [
+                { id: 'S07', name: 'Gokul S', img: 'GS', status: 1 }
+            ]},
+            { id: 105, type: 'AC', capacity: 2, occupants: [
+                { id: 'S08', name: 'Hari K', img: 'HK', status: 1 }
+            ]},
+            // ... fillers for grid
+            { id: 106, type: 'Non-AC', capacity: 4, occupants: [] },
+            { id: 107, type: 'Non-AC', capacity: 4, occupants: [] },
+            { id: 108, type: 'Non-AC', capacity: 4, occupants: [] },
+        ];
+
+        // --- CORE FUNCTIONS ---
+
+        function init() {
+            renderGrid();
+            updateGlobalStats();
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('roomContainer');
+            container.innerHTML = '';
+
+            floorData.forEach(room => {
+                const box = document.createElement('div');
+                box.className = 'room-box group';
+                box.onclick = () => openModal(room.id);
+
+                // Calculate Occupancy Indicators
+                let dotsHtml = '';
+                for(let i=0; i<room.capacity; i++) {
+                    if (room.occupants[i]) {
+                        // Check if student is Present or Absent
+                        const colorClass = room.occupants[i].status === 1 ? 'filled' : 'absent';
+                        dotsHtml += `<div class="dot ${colorClass}"></div>`;
+                    } else {
+                        dotsHtml += `<div class="dot"></div>`;
+                    }
+                }
+
+                // AC Icon
+                const acIcon = room.type === 'AC' ? '<i class="fa-regular fa-snowflake absolute top-2 right-2 text-blue-200"></i>' : '';
+
+                // Count Text
+                const countText = `${room.occupants.length}/${room.capacity}`;
+                const statusColor = room.occupants.length === room.capacity ? 'text-red-500' : (room.occupants.length > 0 ? 'text-indigo-600' : 'text-slate-400');
+
+                box.innerHTML = `
+                    ${acIcon}
+                    <span class="font-bold text-xl text-slate-700 group-hover:text-indigo-600 transition">${room.id}</span>
+                    <span class="text-xs font-bold ${statusColor} mt-1">${countText}</span>
+                    <div class="dot-grid">${dotsHtml}</div>
+                `;
+                container.appendChild(box);
+            });
+        }
+
+        // --- MODAL LOGIC ---
+
+        function openModal(roomId) {
+            const room = floorData.find(r => r.id === roomId);
+            if (!room) return;
+
+            document.getElementById('modalRoomId').innerText = room.id;
+            document.getElementById('modalRoomType').innerText = `${room.type} • ${room.capacity} Capacity`;
+
+            const listContainer = document.getElementById('studentListContainer');
+            listContainer.innerHTML = '';
+
+            if (room.occupants.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="p-8 text-center text-slate-400 flex flex-col items-center">
+                        <i class="fa-solid fa-bed text-4xl mb-2 opacity-50"></i>
+                        <p class="text-sm">Room is currently empty.</p>
+                    </div>`;
+            } else {
+                room.occupants.forEach((student, index) => {
+                    // Toggle State Logic
+                    const isPresent = student.status === 1;
+                    
+                    const row = document.createElement('div');
+                    row.className = 'p-4 flex items-center justify-between hover:bg-slate-50 transition';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
+                                ${student.img}
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm">${student.name}</p>
+                                <p class="text-xs text-slate-500">ID: ${student.id}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex bg-slate-100 rounded-lg p-1 border border-slate-200">
+                            <button onclick="toggleAttendance(${roomId}, '${student.id}', 1)" 
+                                class="px-3 py-1 text-xs font-bold rounded-md transition ${isPresent ? 'bg-white text-green-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}">
+                                Present
+                            </button>
+                            <button onclick="toggleAttendance(${roomId}, '${student.id}', 0)" 
+                                class="px-3 py-1 text-xs font-bold rounded-md transition ${!isPresent ? 'bg-white text-red-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}">
+                                Absent
+                            </button>
+                        </div>
+                    `;
+                    listContainer.appendChild(row);
+                });
+            }
+
+            const modal = document.getElementById('roomModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('active'), 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('roomModal');
+            modal.classList.remove('active');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+            renderGrid(); // Refresh grid colors on close
+            updateGlobalStats();
+        }
+
+        // --- ATTENDANCE STATE MANAGEMENT ---
+
+        function toggleAttendance(roomId, studentId, newStatus) {
+            // 1. Find Room
+            const room = floorData.find(r => r.id === roomId);
+            // 2. Find Student
+            const student = room.occupants.find(s => s.id === studentId);
+            // 3. Update Status
+            student.status = newStatus;
+            
+            // 4. Re-render Modal to show toggle switch
+            openModal(roomId);
+        }
+
+        function updateGlobalStats() {
+            let present = 0;
+            let absent = 0;
+            floorData.forEach(room => {
+                room.occupants.forEach(s => {
+                    if (s.status === 1) present++;
+                    else absent++;
+                });
+            });
+            document.getElementById('presentCount').innerText = present;
+            document.getElementById('absentCount').innerText = absent;
+        }
+
+        // --- REQUEST HELPER ---
+        function checkAvailability(roomId) {
+            // Switch view to floor map
+            showSection('floor-view', document.querySelector('.nav-item')); 
+            // Highlight the specific room (Simulation)
+            setTimeout(() => {
+                openModal(roomId);
+                alert(`Checking availability for Room ${roomId}. Verify occupants manually.`);
+            }, 300);
+        }
+
+        // --- NAVIGATION ---
+        function showSection(id, btn) {
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            if(btn) btn.classList.add('active');
+        }
+
+        function logoutUser() {
+            if(confirm("Logout Warden?")) window.location.href="login.html";
+        }
+
+        // Initialize
+        init();
+
+    </script>
+</body>
+</html>
